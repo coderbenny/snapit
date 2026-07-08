@@ -239,6 +239,7 @@ Visit **[snapit.ink](https://snapit.ink)**, create an account, then install the 
 # macOS
 brew tap coderbenny/tap
 brew install --cask snapit
+brew trust --cask coderbenny/tap/snapit
 ```
 
 Android: download the APK from the [latest release](https://github.com/coderbenny/snap_mobile/releases)
