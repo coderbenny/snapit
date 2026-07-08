@@ -1,0 +1,816 @@
+{
+  "info": {
+    "name": "Snapit API",
+    "description": "Complete API collection for the Snapit universal clipboard sync system.\n\n**Setup**\n1. Set the `baseUrl` variable to your server (default: `https://api.snapit.ink/snap`)\n2. Call **Auth → Login** — the access and refresh tokens are captured automatically\n3. All authenticated requests use `{{accessToken}}` via the collection-level Bearer auth\n\nAll clipboard content is encrypted client-side (AES-256-GCM) before being sent to the server. The server stores and relays ciphertext only.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.snapit.ink/snap",
+      "description": "Change to http://localhost:5559/snap for local development"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "description": "Populated automatically by the Login request"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "description": "Populated automatically by the Login request"
+    },
+    {
+      "key": "deviceId",
+      "value": "",
+      "description": "Populated automatically by Register Device"
+    },
+    {
+      "key": "teamId",
+      "value": "",
+      "description": "Populated automatically by Create Team"
+    },
+    {
+      "key": "transferSessionId",
+      "value": "",
+      "description": "Populated automatically by Start Transfer"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "description": "Health and status endpoints — no authentication required",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/../health",
+              "host": ["{{baseUrl}}/../health"]
+            },
+            "description": "Returns service status and version. Safe to poll from load balancers."
+          },
+          "response": []
+        },
+        {
+          "name": "Database Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/../health/db",
+              "host": ["{{baseUrl}}/../health/db"]
+            },
+            "description": "Verifies the database connection is alive. Returns 503 if MySQL is unreachable."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registration, login, token management and email verification",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securepassword\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Create a new user account. Triggers a verification email."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', body.refresh_token);",
+                  "  pm.test('Tokens captured', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securepassword\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Authenticates the user and returns access + refresh tokens. The test script saves both tokens to collection variables automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/auth/me" },
+            "description": "Returns the authenticated user's id, email, and current plan."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Issues a new access token using a valid refresh token. New token is saved automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Invalidates the refresh token server-side."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Verification Email",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/auth/send-verification" },
+            "description": "Sends an email verification link to the authenticated user's email address."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Verification Email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/resend-verification" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Resends the verification email. Rate-limited."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/verify-email" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<verification-token-from-email>\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Verifies the user's email address using the token from the verification email."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/forgot-password" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Sends a password reset link to the given email. Always returns 200 (no email enumeration)."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/reset-password" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<reset-token-from-email>\",\n  \"password\": \"newSecurePassword\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Resets the user's password using the token from the reset email."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "description": "Device registration and management. Each client device registers once and receives a device ID used throughout the session.",
+      "item": [
+        {
+          "name": "Register Device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) pm.collectionVariables.set('deviceId', body.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/devices/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"name\": \"MacBook Pro\",\n  \"platform\": \"macos\",\n  \"app_version\": \"1.0.0\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Registers a device for the authenticated user. The `device_id` is client-generated (UUID v4). Platforms: `macos`, `windows`, `android`, `ios`, `web`."
+          },
+          "response": []
+        },
+        {
+          "name": "List Devices",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/devices" },
+            "description": "Returns all registered devices for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Device",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/devices/{{deviceId}}",
+              "variable": [{ "key": "deviceId", "value": "{{deviceId}}" }]
+            },
+            "description": "Removes a device. The device will no longer receive SSE events or sync updates."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sync",
+      "description": "Encrypted clipboard item sync. Requires Pro or higher plan. All `ciphertext` and `iv` values are Base64-encoded AES-256-GCM data — the server never decrypts them.",
+      "item": [
+        {
+          "name": "Pull Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/sync?since=0&limit=200",
+              "query": [
+                { "key": "since", "value": "0", "description": "Unix timestamp ms — returns items synced after this point. Use 0 for first sync." },
+                { "key": "limit", "value": "200", "description": "Max items to return (max 200)" }
+              ]
+            },
+            "description": "Pulls clipboard items modified since the given timestamp. Use `has_more: true` to paginate — advance `since` to the latest `synced_at` value."
+          },
+          "response": []
+        },
+        {
+          "name": "Push Items",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/sync/push" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"ciphertext\": \"<base64-encoded-aes-gcm-ciphertext>\",\n      \"iv\": \"<base64-encoded-12-byte-nonce>\",\n      \"content_type\": \"text\",\n      \"tags\": [],\n      \"pinned\": false,\n      \"device_id\": \"{{deviceId}}\",\n      \"client_created_at\": 1700000000000\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Pushes new or updated clipboard items. Max 500 items per request. Triggers an SSE `sync` event to all other connected devices."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Items",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/sync/delete" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"550e8400-e29b-41d4-a716-446655440000\"\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Soft-deletes clipboard items by ID. Max 500 IDs per request. Deleted items are returned on pull with a `deleted_at` field so other devices can remove them locally."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "description": "Real-time file transfer between two devices. The server acts as a relay — file data is never written to disk. The WebSocket endpoints (`/send`, `/recv`) must be connected with `wss://` and a valid `Authorization: Bearer <token>` header.",
+      "item": [
+        {
+          "name": "Start Transfer Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.session_id) pm.collectionVariables.set('transferSessionId', body.session_id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transfer/start" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_device_id\": \"<recipient-device-id>\",\n  \"file_name\": \"document.pdf\",\n  \"file_size\": 1048576,\n  \"mime_type\": \"application/pdf\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Creates a transfer session and notifies the target device via SSE (`transfer_incoming` event). Returns a `session_id` used to connect the sender and receiver WebSockets."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Transfer",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/transfer/{{transferSessionId}}",
+              "variable": [{ "key": "transferSessionId", "value": "{{transferSessionId}}" }]
+            },
+            "description": "Cancels an active transfer session. Sends a `transfer_cancelled` SSE event to both parties."
+          },
+          "response": []
+        },
+        {
+          "name": "WebSocket — Send File",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "wss://api.snapit.ink/snap/transfer/{{transferSessionId}}/send",
+              "variable": [{ "key": "transferSessionId", "value": "{{transferSessionId}}" }]
+            },
+            "description": "⚠️ WebSocket — cannot be tested in Postman HTTP mode. Use Postman's WebSocket tab.\n\nConnect with header `Authorization: Bearer {{accessToken}}`. Stream binary file chunks. Send a JSON `{\"done\": true}` message to signal EOF."
+          },
+          "response": []
+        },
+        {
+          "name": "WebSocket — Receive File",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "wss://api.snapit.ink/snap/transfer/{{transferSessionId}}/recv",
+              "variable": [{ "key": "transferSessionId", "value": "{{transferSessionId}}" }]
+            },
+            "description": "⚠️ WebSocket — cannot be tested in Postman HTTP mode. Use Postman's WebSocket tab.\n\nConnect with header `Authorization: Bearer {{accessToken}}`. Receive binary chunks as they are relayed from the sender. Connection closes automatically when the sender signals EOF."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Events (SSE)",
+      "description": "Server-Sent Events stream for real-time notifications. Keep this connection open — the server pushes events without polling.\n\n**Event types**\n- `sync` — a device pushed new clipboard items\n- `transfer_incoming` — another device is initiating a file transfer to you\n- `transfer_cancelled` — a pending transfer was cancelled\n- `plan_changed` — the user's subscription plan changed",
+      "item": [
+        {
+          "name": "Subscribe to Event Stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "text/event-stream" },
+              { "key": "Cache-Control", "value": "no-cache" }
+            ],
+            "url": { "raw": "{{baseUrl}}/events" },
+            "description": "Opens a persistent SSE connection. The server sends keepalive comments (`: ping`) every 15 seconds. Reconnect automatically with exponential back-off on disconnect.\n\n⚠️ Postman will show the raw `data:` lines as they arrive. In production clients, use `EventSource` (web) or a streaming HTTP library (Flutter/mobile)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "description": "Subscription management via Paystack",
+      "item": [
+        {
+          "name": "List Plans",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/billing/plans" },
+            "description": "Returns all available subscription plans with pricing."
+          },
+          "response": []
+        },
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/billing/subscribe" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"pro\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Initiates a Paystack checkout session. Returns a `checkout_url` to redirect the user to, and an `access_code` for the Paystack inline SDK."
+          },
+          "response": []
+        },
+        {
+          "name": "Billing Portal",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/billing/portal" },
+            "description": "Returns a Paystack Customer Portal URL where the user can manage or cancel their subscription."
+          },
+          "response": []
+        },
+        {
+          "name": "Paystack Webhook",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-paystack-signature", "value": "<hmac-sha512-signature>" }
+            ],
+            "url": { "raw": "{{baseUrl}}/webhooks/paystack" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Paystack webhook receiver. Validates the `x-paystack-signature` header against `PAYSTACK_WEBHOOK_SECRET`. Not for direct use — called by Paystack servers only."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "description": "Team management and shared snippet libraries. Requires Team plan.",
+      "item": [
+        {
+          "name": "Create Team",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) pm.collectionVariables.set('teamId', body.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/teams" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Engineering Team\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Creates a new team. The authenticated user becomes the owner."
+          },
+          "response": []
+        },
+        {
+          "name": "List Team Members",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{teamId}}/members",
+              "variable": [{ "key": "teamId", "value": "{{teamId}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{teamId}}/invite",
+              "variable": [{ "key": "teamId", "value": "{{teamId}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teammate@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Shared Snippets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{teamId}}/snippets",
+              "variable": [{ "key": "teamId", "value": "{{teamId}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Shared Snippet",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{teamId}}/snippets",
+              "variable": [{ "key": "teamId", "value": "{{teamId}}" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ciphertext\": \"<base64-encoded-aes-gcm-ciphertext>\",\n  \"iv\": \"<base64-encoded-12-byte-nonce>\",\n  \"content_type\": \"text\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Shared Snippet",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/teams/{{teamId}}/snippets/:snippet_id",
+              "variable": [
+                { "key": "teamId", "value": "{{teamId}}" },
+                { "key": "snippet_id", "value": "" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Admin-only endpoints. Requires the authenticated user to have `is_admin = true`. All endpoints are under `/snap/admin/`.",
+      "item": [
+        {
+          "name": "System Stats",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/stats" },
+            "description": "Returns user counts, active subscriptions, and device totals."
+          },
+          "response": []
+        },
+        {
+          "name": "System Health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/system" },
+            "description": "Returns Redis connectivity, active SSE connections, and Celery worker status."
+          },
+          "response": []
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/users" }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:user_id",
+              "variable": [{ "key": "user_id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:user_id",
+              "variable": [{ "key": "user_id", "value": "" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_admin\": false,\n  \"is_active\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:user_id",
+              "variable": [{ "key": "user_id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Subscriptions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/subscriptions" }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Subscription",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/subscriptions/:sub_id",
+              "variable": [{ "key": "sub_id", "value": "" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"pro\",\n  \"status\": \"active\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Devices (Admin)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/devices" }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Device (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/admin/devices/:device_id",
+              "variable": [{ "key": "device_id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Coupons",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/coupons" }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Coupon",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/admin/coupons" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"LAUNCH50\",\n  \"discount_type\": \"percentage\",\n  \"discount_value\": 50,\n  \"max_uses\": 100,\n  \"expires_at\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Coupon",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons/:coupon_id",
+              "variable": [{ "key": "coupon_id", "value": "" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Coupon",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons/:coupon_id",
+              "variable": [{ "key": "coupon_id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Coupon Uses",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons/:coupon_id/uses",
+              "variable": [{ "key": "coupon_id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Broadcast Message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/admin/broadcast" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Scheduled maintenance\",\n  \"message\": \"The service will be down for 10 minutes at 02:00 UTC.\",\n  \"target\": \"all\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Sends a push notification or SSE broadcast to all users or a specific subset."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

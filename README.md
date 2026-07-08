@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://snapit.ink/icon.png" alt="Snapit" width="80" />
+<img src="logo.png" alt="Snapit" width="80" />
 
 # Snapit
 
@@ -212,6 +212,20 @@ Snapit is a cross-platform clipboard sync system that keeps your clipboard in sy
 - User management, plan overrides, broadcast messaging
 - Coupon system with percentage and flat discounts
 - System health dashboard
+
+---
+
+## API
+
+The full REST API is documented in [`openapi.yaml`](https://github.com/coderbenny/snap_BE/blob/main/openapi.yaml) and available as a ready-to-import Postman collection in this repo.
+
+**Import into Postman:**
+1. Open Postman → **Import** → select `Snapit.postman_collection.json`
+2. Set the `baseUrl` collection variable (`https://api.snapit.ink/snap` for production, `http://localhost:5559/snap` for local)
+3. Run **Auth → Login** — access and refresh tokens are captured automatically into collection variables
+4. All other requests are ready to use
+
+The collection covers all endpoints across Auth, Devices, Sync, File Transfer, Events (SSE), Billing, Teams, and Admin — including pre-request scripts that auto-save tokens and IDs.
 
 ---
 
