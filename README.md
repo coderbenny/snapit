@@ -107,7 +107,7 @@ Snapit is a cross-platform clipboard sync system that keeps your clipboard in sy
 | Repo | Role | Language / Framework |
 |------|------|----------------------|
 | [**snap_BE**](https://github.com/coderbenny/snap_BE) | REST API, SSE event stream, WebSocket file-transfer relay, Celery workers | Python · Flask |
-| [**snap_FE**](https://github.com/coderbenny/snap_FE) | Web dashboard, marketing site, billing portal | TypeScript · Next.js 14 |
+| [**snap_FE**](https://github.com/coderbenny/snap_FE) | Web dashboard, marketing site, billing portal | JavaScript · Next.js 14 |
 | [**snap_PC**](https://github.com/coderbenny/snap_PC) | Desktop app — macOS (Homebrew) and Windows | Dart · Flutter |
 | [**snap_mobile**](https://github.com/coderbenny/snap_mobile) | Android app with background sync and share-sheet integration | Dart · Flutter |
 | [**homebrew-tap**](https://github.com/coderbenny/homebrew-tap) | Homebrew Cask for `brew install --cask snapit` | Ruby · Homebrew |
@@ -140,7 +140,7 @@ Snapit is a cross-platform clipboard sync system that keeps your clipboard in sy
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 14 (App Router) · React 18 |
-| Language | TypeScript |
+| Language | JavaScript |
 | Styling | Tailwind CSS v4 · shadcn/ui · Base UI |
 | Auth | iron-session (server-side sessions) |
 | HTTP | Axios |
@@ -154,7 +154,7 @@ Snapit is a cross-platform clipboard sync system that keeps your clipboard in sy
 |-------|-----------|
 | Framework | Flutter (macOS · Windows) |
 | Language | Dart |
-| State | Riverpod + code generation |
+| State | Riverpod 2 |
 | Navigation | GoRouter |
 | HTTP / SSE | Dio |
 | Storage | flutter_secure_storage · SharedPreferences |
@@ -168,7 +168,7 @@ Snapit is a cross-platform clipboard sync system that keeps your clipboard in sy
 |-------|-----------|
 | Framework | Flutter (Android) |
 | Language | Dart |
-| State | Riverpod + code generation |
+| State | Riverpod 2 |
 | Navigation | GoRouter |
 | HTTP / SSE | Dio |
 | Local DB | SQLite via sqflite |
